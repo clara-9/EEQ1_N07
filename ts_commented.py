@@ -51,6 +51,7 @@ lsq=LinearRegression()
 lsq.fit(X=df[["frequency"]],y=df["power"])
 df["lsq-estimated"]=lsq.predict(df[["frequency"]])
 print('Least Squares: P={}·n +{}, Rsq{}'.format(lsq.coef_, lsq.intercept_, lsq.score(X=df[["frequency"]],y=df["power"])))
+print(mean_squared_error(df["power"],df["lsq-estimated"]))
 
 #Get confidence
 conf_max=[]
@@ -96,9 +97,9 @@ df["Re"]=ro*df["frequency"]*df["diameter"]/viscositat
 df["Np"]=(df["power"]/(df["diameter"]**5*df["frequency"]**3*ro))
 df["Fr"]=df["frequency"]**2*df["diameter"]/9.81
 
-df["logRe"]=numpy.log(df["Re"])
-df["logNp"]=numpy.log(df["Np"])
-df["logFr"]=numpy.log(df["Fr"])
+df["logRe"]=numpy.log10(df["Re"])
+df["logNp"]=numpy.log10(df["Np"])
+df["logFr"]=numpy.log10(df["Fr"])
 
 #Theeil-Sen
 ts=TheilSenRegressor(fit_intercept=True)
@@ -110,6 +111,7 @@ lsq=LinearRegression()
 lsq.fit(X=df[["logRe"]],y=df["logNp"])
 df["lsq-estimatedNp"]=lsq.predict(df[["logRe"]])
 print('Least Squares: Np={}·log(Re) +{}, Rsq{}'.format(lsq.coef_, lsq.intercept_, lsq.score(X=df[["logRe"]],y=df["logNp"])))
+print(mean_squared_error(df["logNp"],df["lsq-estimatedNp"]))
 
 #Plot and save
 plt.clf()
@@ -128,9 +130,10 @@ lr.fit(X=df[["logRe","logFr"]],y=df["logNp"])
 df["lsq-estimatedNp2"]=lr.predict(df[["logRe","logFr"]])
 
 print('Least Squares: log(Np)={}log(Re)+{}log(Fr)+{}, Rsq{}'.format(lr.coef_[0],lr.coef_[1], lr.intercept_, lr.score(X=df[["logRe","logFr"]],y=df["logNp"])))
+print(mean_squared_error(df["logNp"],df["lsq-estimatedNp2"]))
 #Other plots
 
-def byseries(df,x,y, name):
+def byseries(df,x,y, name, xlab, ylab):
     df2 = df.copy(deep=True)
     df2['Serie'] = df2['Serie'].astype(str).str[0:4]
     plt.clf()
@@ -138,14 +141,14 @@ def byseries(df,x,y, name):
     for series in df2["Serie"].unique():
         seriesdf=df2[df2["Serie"]==series]
         plt.scatter(seriesdf[x],seriesdf[y], label=series, marker="x", s=70)
-    plt.xlabel("log(Re)")
-    plt.ylabel("log(Np)")  
+    plt.xlabel(xlab)
+    plt.ylabel(ylab)  
     ax.legend(ncol=3)
     ax.grid(True)
     plt.savefig(name+".png")
     return
-byseries(df,"frequency","power","pow-freq series")
-byseries(df,"logRe","logNp","adimensional series")
+byseries(df,"frequency","power","pow-freq series","Frequency (Hz)","Power (W)" )
+byseries(df,"logRe","logNp","adimensional series", "log(Re)", "log(Np)")
 
 
 def byrodet1(df,x,y, name):
@@ -156,7 +159,7 @@ def byrodet1(df,x,y, name):
     for series in df2["Serie"].unique():
         seriesdf=df2[df2["Serie"]==series]
         plt.scatter(seriesdf[x],seriesdf[y], label=series, marker="x", s=70)
-    plt.xlabel("Frquency (Hz)")
+    plt.xlabel("Frequency (Hz)")
     plt.ylabel("Power (W)")  
     ax.legend(ncol=1, labels=df["Serie.1"].unique())
     ax.grid(True)
@@ -193,7 +196,8 @@ def rodet_fit():
         seriesdf.sort_values(by='frequency', inplace=True)
         plt.scatter(y=seriesdf["power"],x=seriesdf["frequency"], marker="x", s=70)
         plt.plot(seriesdf["frequency"],seriesdf["predP"])
-       # print('{}: Np={}·log(Re) +{}, Rsq{}'.format(series, lsq.coef_, lsq.intercept_, lsq.score(X=seriesdf[["logRe"]],y=seriesdf["logNp"])))
+        print('{}: P={}·N +{}, Rsq{}'.format(series, lsq.coef_, lsq.intercept_, lsq.score(X=seriesdf[["frequency"]],y=seriesdf["power"])))
+        print(mean_squared_error(seriesdf["power"],seriesdf["predP"]))
     plt.xlabel("Frequency(Hz)")
     plt.ylabel("Powe (W)")    
     ax.legend(loc='upper left', labels=df["Serie.1"].unique())
@@ -215,6 +219,7 @@ def rodet_fit():
         plt.scatter(y=seriesdf["logNp"],x=seriesdf["logRe"], marker="x", s=70)
         plt.plot(seriesdf["logRe"],seriesdf["predNp"])
         print('{}: Np={}·log(Re) +{}, Rsq{}'.format(series, lsq.coef_, lsq.intercept_, lsq.score(X=seriesdf[["logRe"]],y=seriesdf["logNp"])))
+        print(mean_squared_error(seriesdf["logNp"],seriesdf["predNp"]))
     plt.xlabel("log(Re)")
     plt.ylabel("log(Np)")    
     ax.legend(loc='upper right', labels=df["Serie.1"].unique())
@@ -307,46 +312,46 @@ def comp_errors():
 comp_errors()
 
 
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
-import numpy as np
+# from mpl_toolkits.mplot3d import Axes3D
+# import matplotlib.pyplot as plt
+# import numpy as np
 
 
 
-fig = plt.figure(figsize=[13,8],dpi=200)
-ax = fig.add_subplot(111, projection='3d')
+# fig = plt.figure(figsize=[13,8],dpi=200)
+# ax = fig.add_subplot(111, projection='3d')
 
 
-xs = df["logRe"]
-ys = df["logNp"]
-zs = df["logFr"]
-ax.scatter(xs, ys, zs, c="b", marker="x", depthshade=True)
+# xs = df["logRe"]
+# ys = df["logNp"]
+# zs = df["logFr"]
+# ax.scatter(xs, ys, zs, c="b", marker="x", depthshade=True)
 
-ax.set_xlabel('log(Re)')
-ax.set_ylabel('log(Fr)')
-ax.set_zlabel('log(Np)')
+# ax.set_xlabel('log(Re)')
+# ax.set_ylabel('log(Fr)')
+# ax.set_zlabel('log(Np)')
 
-plt.show()
+# plt.show()
 
-xs = df["logRe"]
-ys = df["logNp"]
-zs = df["logFr"]
+# xs = df["logRe"]
+# ys = df["logNp"]
+# zs = df["logFr"]
 
-fig = plt.figure(figsize=[13,8],dpi=200)
-ax = fig.gca(projection='3d')
+# fig = plt.figure(figsize=[13,8])
+# ax = fig.gca(projection='3d')
 
-ax.plot_trisurf(xs, ys, zs, linewidth=0.2, antialiased=True)
+# ax.plot_trisurf(xs, ys, zs, linewidth=0.2, antialiased=True)
 
-for angle in range(0, 360, 3):
-    fig = plt.figure(figsize=[13,8])
-    ax = fig.gca(projection='3d')
-    ax.scatter(xs, ys, zs, c="b", marker="x", depthshade=True)
-    ax.view_init(30, angle)
-    ax.set_xlabel('log(Re)')
-    ax.set_zlabel('log(Fr)')
-    ax.set_ylabel('log(Np)')
-    plt.savefig("animated/"+str(angle)+'comp_errpor.png')
-    plt.pause(.001)
+# for angle in range(0, 360, 3):
+#     fig = plt.figure(dpi=100)
+#     ax = fig.gca(projection='3d')
+#     ax.scatter(xs, ys, zs, c="b", marker="x", depthshade=True)
+#     ax.view_init(30, angle)
+#     ax.set_xlabel('log(Re)')
+#     ax.set_zlabel('log(Fr)')
+#     ax.set_ylabel('log(Np)')
+#     plt.savefig("animated/"+str(angle)+'comp_errpor.png')
+#     plt.pause(.001)
 
 xs = df["logRe"]
 ys = df["logNp"]
